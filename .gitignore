@@ -1,7 +1,8 @@
 venv/
 __pycache__/
+**/__pycache__
 .idea/
 log.txt
 screenshot.png
 tmp
-models
+trained_models

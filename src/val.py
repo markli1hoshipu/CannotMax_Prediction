@@ -2,7 +2,10 @@ import json
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from train import UnitAwareTransformer,ArknightsDataset
+
+from module.ArknightsEDDataset import ArknightsDataset
+from module.TransformerNet import UnitAwareTransformer
+
 from utils import *
 
 def evaluate(model, data_loader, criterion, device):
