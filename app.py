@@ -2,9 +2,6 @@
 import sys
 import os
 
-# 将 src 目录添加到 sys.path
-sys.path.append(os.path.abspath('./src'))
-
 # 现在可以导入 utils
 from src.utils import *
 
