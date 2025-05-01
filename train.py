@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import json
 
 from module.ArknightsEDDataset import ArknightsDataset
 from module.TransformerNet import UnitAwareTransformer
@@ -184,20 +185,8 @@ def stratified_random_split(dataset, test_size=0.1, seed=42):
 
 def main():
     # 配置参数
-    config = {
-        'data_file': 'data/arknights_clean.csv',
-        'batch_size': 1024, #128,
-        'test_size': 0.1,
-        'embed_dim': 128,
-        'n_layers': 4,
-        'num_heads': 8,
-        'lr': 3e-4,
-        'epochs': 100,
-        'seed': 42,
-        'save_dir': 'models',
-        'max_feature_value': 100  # 限制特征最大值，防止极端值造成不稳定
-    }
-
+    with open('models/config.json', 'r') as f:
+        config = json.load(f)
     # 创建保存目录
     os.makedirs(config['save_dir'], exist_ok=True)
 
