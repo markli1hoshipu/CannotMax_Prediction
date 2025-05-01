@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from train import UnitAwareTransformer,ArknightsDataset
+from utils import *
 
 def evaluate(model, data_loader, criterion, device):
     model.eval()
@@ -56,8 +57,7 @@ def evaluate(model, data_loader, criterion, device):
     return total_loss / max(1, len(data_loader)), 100 * correct / max(1, total)
 
 def main():
-    with open('models/config.json', 'r') as f:
-        config = json.load(f)
+    config = get_config()
     # 设置设备
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
