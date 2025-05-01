@@ -9,7 +9,9 @@
     "lr": 0.0003,
     "epochs": 100,
     "seed": 42,
-    "save_dir": "models",
-    "model_dir": "models/best_model_full.pth",
-    "max_feature_value": 100
+    "save_dir": "trained_models",
+    "model_dir": "trained_models/best_model_full.pth",
+    "max_feature_value": 100,
+    "ui_file": "resources/ui/main.ui",
+    "ui_photos_direc": "resources/ui/ui_images"
 }

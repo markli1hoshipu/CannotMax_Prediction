@@ -1,6 +1,13 @@
 # pyside6-designer
 import sys
 import os
+
+# 将 src 目录添加到 sys.path
+sys.path.append(os.path.abspath('./src'))
+
+# 现在可以导入 utils
+from utils import *
+
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QTableWidget, 
                               QHeaderView, QSpinBox, QHBoxLayout, QLabel, QWidget, 
                               QVBoxLayout,QTableWidgetItem)
@@ -13,7 +20,8 @@ class BattlePredictor(QMainWindow):
         super().__init__()
         
         # 加载UI文件
-        self.ui = QUiLoader().load('ui/main.ui')
+        self.config = get_config()
+        self.ui = QUiLoader().load(self.config['ui_file'])
         self.setCentralWidget(self.ui)
         
         # 初始化界面
@@ -75,7 +83,7 @@ class BattlePredictor(QMainWindow):
         table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         
         # 图片目录路径
-        image_dir = "ui/ui_images"
+        image_dir = self.config['ui_photos_direc']
         
         try:
             # 获取并排序PNG文件

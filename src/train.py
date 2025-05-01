@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import json
+from utils import *
 
 from module.ArknightsEDDataset import ArknightsDataset
 from module.TransformerNet import UnitAwareTransformer
@@ -185,8 +186,8 @@ def stratified_random_split(dataset, test_size=0.1, seed=42):
 
 def main():
     # 配置参数
-    with open('models/config.json', 'r') as f:
-        config = json.load(f)
+    config = get_config()
+
     # 创建保存目录
     os.makedirs(config['save_dir'], exist_ok=True)
 
