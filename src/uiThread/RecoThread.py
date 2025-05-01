@@ -1,6 +1,6 @@
 from PySide6.QtCore import QThread, Signal ,QProcess,QMutex, QMutexLocker
-import module.Recogize.loadData as loadData
-import module.Recogize.recognize as recognize
+import recogize.loadData as loadData
+import recogize.recognize as recognize
 
 
 class RecoThread(QThread):

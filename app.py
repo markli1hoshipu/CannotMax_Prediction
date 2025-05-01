@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.abspath('./src'))
 
 # 现在可以导入 utils
-from utils import *
+from src.utils import *
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QTableWidget, 
                               QHeaderView, QSpinBox, QHBoxLayout, QLabel, QWidget, 

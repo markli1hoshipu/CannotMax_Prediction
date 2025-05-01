@@ -3,7 +3,7 @@ import time
 import cv2
 import numpy as np
 
-adb_path = r".\module\platform-tools\adb.exe"
+adb_path = r".\src\platform-tools\adb.exe"
 # 默认设备序列号，可以在main.py中修改
 manual_serial = '127.0.0.1:5555'
 
