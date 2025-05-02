@@ -29,7 +29,6 @@ class PredictTab(BaseTab):
     def setup_connections(self):
         self.ui.btnClear.clicked.connect(self._clear_all_numbers)
         self.ui.btnCheck.clicked.connect(self._transfer_valid_data)
-        self.ui.btnPredict.clicked.connect(self._predict_result)
 
     
     def clear_tables(self):
@@ -188,6 +187,9 @@ class PredictTab(BaseTab):
                 right_table.setCellWidget(right_row, 1, right_spin_cell)
                 
                 right_table.setRowHeight(right_row, right_img_cell.sizeHint().height())
+
+        self._predict_result()
+
 
     def _force_table_style(self, table):
         """强制刷新表格样式"""

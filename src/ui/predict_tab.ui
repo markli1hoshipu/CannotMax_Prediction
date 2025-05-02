@@ -85,24 +85,6 @@ QGroupBox::title {
         </item>
        </widget>
       </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
-        <item>
-         <widget class="QPushButton" name="btnCheck">
-          <property name="text">
-           <string>确认</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnClear">
-          <property name="text">
-           <string>归零</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
      </layout>
     </widget>
    </item>
@@ -214,11 +196,22 @@ QGroupBox::title {
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnPredict">
-        <property name="text">
-         <string>（---预测---)</string>
-        </property>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QPushButton" name="btnCheck">
+          <property name="text">
+           <string>（---确认！预测---)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnClear">
+          <property name="text">
+           <string>归零</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="QGroupBox" name="groupBox_3">
