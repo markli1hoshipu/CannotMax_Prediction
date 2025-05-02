@@ -177,7 +177,7 @@ def operation(results):
                 print("等待战斗结束")
             break  # 匹配到第一个结果后退出
 
-def main():
+def loadDatar():
     while True:
         screenshot = capture_screenshot()
         if screenshot is not None:
@@ -187,6 +187,3 @@ def main():
             operation(results)
         time.sleep(2)
 
-
-if __name__ == "__main__":
-    main()

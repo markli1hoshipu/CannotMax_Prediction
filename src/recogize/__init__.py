@@ -1,3 +1,3 @@
 # src/recognize/__init__.py
 
-from .recognize import recognize
+from .recognize import recognizer

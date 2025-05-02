@@ -329,7 +329,8 @@ def load_ref_images(ref_dir="images"):
                 ref_images[i] = ref_resized
     return ref_images
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
+def recognizer():
     print("请用鼠标拖拽选择主区域...")
     main_roi = select_roi()
     ref_images = load_ref_images()
