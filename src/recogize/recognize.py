@@ -64,21 +64,22 @@ class ImageRecognizer:
             self.roi_box.append((x, y))
             self.drawing = False
 
-    def select_roi(self):
+    def select_roi(self,imageshot = None):
+        breakflag = False
         """改进的交互式区域选择"""
-        while True:
+        while not breakflag and imageshot:
             # 获取初始截图
-            screenshot = np.array(ImageGrab.grab())
+            screenshot = imageshot
             img = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
 
             # 添加操作提示
-            cv2.putText(img, "Drag to select area | ENTER:confirm | ESC:retry",
+            cv2.putText(img, "Drag to select area | ENTER:confirm | ESC:retry | Q:quit",
                         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
             # 添加示例图片
-            example_img = cv2.imread("images/eg.png")
+            #example_img = cv2.imread("images/eg.png")
             # 显示示例图片在单独的窗口中
-            cv2.imshow("example", example_img)
+            #cv2.imshow("example", example_img)
 
             # 显示窗口
             cv2.namedWindow("Select ROI", cv2.WINDOW_NORMAL)
@@ -94,6 +95,8 @@ class ImageRecognizer:
                 x1, y1 = min(self.roi_box[0][0], self.roi_box[1][0]), min(self.roi_box[0][1], self.roi_box[1][1])
                 x2, y2 = max(self.roi_box[0][0], self.roi_box[1][0]), max(self.roi_box[0][1], self.roi_box[1][1])
                 return [(x1, y1), (x2, y2)]
+            elif key ==  ord('q'):
+                breakflag = True
             elif key == 27:  # ESC重试
                 self.roi_box = []
                 continue
@@ -213,8 +216,8 @@ class ImageRecognizer:
 
         # 如果没有提供screenshot，则获取最新截图（仅截取主区域）
         if screenshot is None:
-            screenshot = np.array(ImageGrab.grab(bbox=(x1, y1, x2, y2)))
-            screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+            print("未提供截图，跳过识别")
+            return results
         else:
             # 从当前screenshot中提取主区域
             screenshot = screenshot[y1:y2, x1:x2]
@@ -293,10 +296,10 @@ class ImageRecognizer:
 
         return results
 
-    def load_ref_images(self, ref_dir="images"):
+    def load_ref_images(self, ref_dir="resources\ui\ui_images"):
         """加载参考图片库"""
         ref_images = {}
-        for i in range(35):
+        for i in range(56):
             path = os.path.join(ref_dir, f"{i}.png")
             if os.path.exists(path):
                 img = cv2.imread(path)
