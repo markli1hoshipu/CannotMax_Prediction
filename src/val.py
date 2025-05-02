@@ -91,10 +91,10 @@ def main():
     )
     
     model = UnitAwareTransformer(
-        num_units=34,  # 更新为34个怪物
-        embed_dim=128,
-        num_heads=8,
-        num_layers=4  # 注意：train.py中config['n_layers']=4
+        num_units=config["num_units"],  # 更新为34个怪物
+        embed_dim=config["embed_dim"],
+        num_heads=config["num_heads"],
+        num_layers=config["num_layers"]  # 注意：train.py中config['n_layers']=4
     ).to(device)
 
     # 加载模型权重
