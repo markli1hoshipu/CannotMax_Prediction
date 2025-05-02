@@ -291,3 +291,10 @@ class PredictTab(BaseTab):
     def _handle_error(self, error_msg):
         """处理错误信号"""
         self.ui.textOutcome.setPlainText(error_msg)
+        
+    def cleanup(self):
+        """清理资源，关闭线程"""
+        if hasattr(self, '_nn_thread'):
+            self._nn_thread.quit()  # 请求线程退出
+            self._nn_thread.wait()  # 等待线程结束
+            del self._nn_thread
