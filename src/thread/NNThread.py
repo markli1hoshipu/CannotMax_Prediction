@@ -32,10 +32,18 @@ class NNWorker(QObject):
             try:
                 import torch.serialization
                 torch.serialization.add_safe_globals([UnitAwareTransformer])
-                model = torch.load(model_path, map_location=self.device, weights_only=True)
+                try:
+                    model = torch.load(model_path, map_location=self.device, weights_only=False)
+                except TypeError:  # 如果旧版本 PyTorch 不认识 weights_only
+                    model = torch.load(model_path, map_location=self.device)
+
             except:
                 print("警告: 使用非安全模式加载模型，请确保模型来源可信")
-                model = torch.load(model_path, map_location=self.device, weights_only=False)
+                # 加载模型权重
+                try:
+                    model = torch.load(model_path, map_location=self.device, weights_only=False)
+                except TypeError:  # 如果旧版本 PyTorch 不认识 weights_only
+                    model = torch.load(model_path, map_location=self.device)
 
             model.eval()
             self.model = model.to(self.device)
