@@ -1,5 +1,5 @@
 from PySide6.QtCore import QThread, Signal ,QProcess,QMutex, QMutexLocker
-from ..recogize import recognize
+from ..recogize import ImageRecognizer
 
 class RecoThread(QThread):
     """OCR识别线程"""
@@ -11,19 +11,11 @@ class RecoThread(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._auto_fetch = False
-        self._no_region = True
         self._first_recognize = True
         self._main_roi = None
         self._running = False
+        self.recogizer = ImageRecognizer()
         
-
-    def set_parameters(self, auto_fetch=False, no_region=True, main_roi=None):
-        """设置识别参数"""
-        self._auto_fetch = auto_fetch
-        self._no_region = no_region
-        self._main_roi = main_roi
-
     def is_running(self):
         return self._running
 
@@ -32,7 +24,7 @@ class RecoThread(QThread):
         self.quit()
         self.wait()  # 等待线程结束
 
-    def run(self,adbshot=None,cvshot=None,detectway="None"):
+    def run(self,adbshot=None,cvshot=None,detectway="None",selectROI=False):
         """线程主逻辑"""
         self._running = True
         screenshot = None
@@ -42,8 +34,12 @@ class RecoThread(QThread):
             elif detectway == "cv":
                 screenshot = cvshot
             # 执行OCR识别
+            
+            if selectROI:
+                self._main_roi = self.recogizer.select_roi(screenshot)
+            
             if self._main_roi and screenshot:
-                results = recognize.process_regions(self._main_roi, screenshot=screenshot)
+                results = self.recogizer.process_regions(self._main_roi, screenshot=screenshot)
                 self.recognition_complete.emit(results)
                 self._process_results(results)
                 
