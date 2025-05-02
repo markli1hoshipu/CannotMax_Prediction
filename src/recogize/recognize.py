@@ -5,7 +5,7 @@ import pytesseract
 from PIL import ImageGrab
 
 # 配置Tesseract路径
-pytesseract.pytesseract.tesseract_cmd = r'Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'src\outerTools\Tesseract-OCR\tesseract.exe'
 
 # 鼠标交互全局变量
 drawing = False
