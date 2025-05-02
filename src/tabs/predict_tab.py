@@ -22,7 +22,7 @@ class PredictTab(BaseTab):
         layout.addWidget(self.ui)
         self.setLayout(layout)
         
-        # 处理表格
+        self._init_nn_thread()
         self.clear_tables()
         self._init_enemy_selection_table()
     
@@ -225,6 +225,12 @@ class PredictTab(BaseTab):
 
         return spin
 
+    def _init_nn_thread(self):
+        self._nn_thread = NNThread()
+        self._nn_thread.worker.prediction_ready.connect(self._handle_prediction)
+        self._nn_thread.worker.error_occurred.connect(self._handle_error)
+        self._nn_thread.start()
+
     def predictText(self, prediction):
         """格式化预测结果并设置样式（完全匹配原始逻辑）"""
         # 确保预测值在合理范围内
@@ -268,21 +274,18 @@ class PredictTab(BaseTab):
         """)
     
         return result_text
-        
+
     def _predict_result(self):
         try:
-            left_counts = get_spinbox_column_data(self.ui.tableSelectEnemy,1)
-            right_counts = get_spinbox_column_data(self.ui.tableSelectEnemy,2)
-            
-            if not hasattr(self, '_nn_thread'):
-                self._nn_thread = NNThread()
-                self._nn_thread.start()
-                self._nn_thread.worker.prediction_ready.connect(self._handle_prediction)
-                self._nn_thread.worker.error_occurred.connect(self._handle_error)
+            left_counts = get_spinbox_column_data(self.ui.tableSelectEnemy, 1)
+            right_counts = get_spinbox_column_data(self.ui.tableSelectEnemy, 2)
+
             self.ui.textOutcome.setPlainText("计算中...")
             self._nn_thread.request_prediction(left_counts, right_counts)
+
         except Exception as e:
             self.ui.textOutcome.setPlainText(f"错误: {str(e)}")
+
     
     def _handle_prediction(self, prediction):
         """处理预测结果信号"""
@@ -291,10 +294,11 @@ class PredictTab(BaseTab):
     def _handle_error(self, error_msg):
         """处理错误信号"""
         self.ui.textOutcome.setPlainText(error_msg)
-        
+       
     def cleanup(self):
         """清理资源，关闭线程"""
         if hasattr(self, '_nn_thread'):
             self._nn_thread.quit()  # 请求线程退出
             self._nn_thread.wait()  # 等待线程结束
             del self._nn_thread
+

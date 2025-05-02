@@ -1,118 +1,134 @@
 import os
 import numpy as np
 import torch
-from PySide6.QtCore import QThread, Signal, QObject, Qt, Q_ARG
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import QThread, Signal, QObject, Slot
 from ..module.TransformerNet import UnitAwareTransformer
 from ..utils import get_config
+
+
 class NNWorker(QObject):
     """
-    神经网络工作器，用于在子线程中执行神经网络相关操作
+    改进版神经网络工作器，优化了线程安全和错误处理
     """
-    prediction_ready = Signal(float)  # 预测完成信号，携带预测结果
-    error_occurred = Signal(str)     # 错误信号，携带错误信息
-    model_loaded = Signal()          # 模型加载完成信号
+    prediction_ready = Signal(float)         # 预测结果信号 (0-1之间的值)
+    error_occurred = Signal(str)             # 错误信息信号
+    model_loaded = Signal()                  # 模型加载完成信号
+    predict_requested = Signal(list, list)   # 请求预测信号，供线程调用
 
     def __init__(self, device='cpu'):
         super().__init__()
-        self.device = device
+        self.device = torch.device(device)
         self.model = None
+        self._model_loaded = False
 
+    @Slot()
     def load_model(self, model_path=get_config()['model_dir']):
-        """在子线程中加载模型"""
+        """自动选择加载策略"""
         try:
             if not os.path.exists(model_path):
-                raise FileNotFoundError(f"未找到训练好的模型文件 '{model_path}'，请先训练模型")
+                raise FileNotFoundError(f"模型文件不存在: {model_path}")
 
+            # 先尝试安全模式
             try:
+                import torch.serialization
+                torch.serialization.add_safe_globals([UnitAwareTransformer])
+                model = torch.load(model_path, map_location=self.device, weights_only=True)
+            except:
+                print("警告: 使用非安全模式加载模型，请确保模型来源可信")
                 model = torch.load(model_path, map_location=self.device, weights_only=False)
-            except TypeError:  # 如果旧版本 PyTorch 不认识 weights_only
-                model = torch.load(model_path, map_location=self.device)
-            
+
             model.eval()
             self.model = model.to(self.device)
+            self._model_loaded = True
             self.model_loaded.emit()
 
         except Exception as e:
             error_msg = f"模型加载失败: {str(e)}"
-            if "missing keys" in str(e):
-                error_msg += "\n可能是模型结构不匹配，请重新训练模型"
             self.error_occurred.emit(error_msg)
 
+    @Slot(list, list)
     def predict(self, left_counts, right_counts):
-        """在子线程中执行预测"""
+        """线程安全的预测方法"""
         try:
-            if self.model is None:
-                raise RuntimeError("模型未正确初始化")
+            if not self._model_loaded:
+                raise RuntimeError("模型未加载或加载失败")
 
-            # 转换为张量并处理符号和绝对值
-            left_signs = torch.sign(torch.tensor(left_counts, dtype=torch.int16)).unsqueeze(0).to(self.device)
-            left_counts = torch.abs(torch.tensor(left_counts, dtype=torch.int16)).unsqueeze(0).to(self.device)
-            right_signs = torch.sign(torch.tensor(right_counts, dtype=torch.int16)).unsqueeze(0).to(self.device)
-            right_counts = torch.abs(torch.tensor(right_counts, dtype=torch.int16)).unsqueeze(0).to(self.device)
+            if not all(isinstance(x, (int, float)) for x in left_counts + right_counts):
+                raise ValueError("输入必须为数字列表")
 
-            # 预测流程
+            def prepare_input(data):
+                data = np.array(data, dtype=np.float32)
+                signs = np.sign(data)
+                counts = np.abs(data)
+                return (
+                    torch.from_numpy(signs).unsqueeze(0).to(self.device),
+                    torch.from_numpy(counts).unsqueeze(0).to(self.device)
+                )
+
+            left_signs, left_counts = prepare_input(left_counts)
+            right_signs, right_counts = prepare_input(right_counts)
+
             with torch.no_grad():
-                prediction = self.model(left_signs, left_counts, right_signs, right_counts).item()
+                prediction = self.model(
+                    left_signs, left_counts, 
+                    right_signs, right_counts
+                ).item()
 
-                # 确保预测值在有效范围内
-                if np.isnan(prediction) or np.isinf(prediction):
-                    print("警告: 预测结果包含NaN或Inf，返回默认值0.5")
+                if not np.isfinite(prediction):
                     prediction = 0.5
-
-                # 检查预测结果是否在[0,1]范围内
-                if prediction < 0 or prediction > 1:
-                    prediction = max(0, min(1, prediction))
+                    print("警告: 预测结果为非数值，已重置为0.5")
+                prediction = max(0.0, min(1.0, prediction))
 
             self.prediction_ready.emit(prediction)
 
         except Exception as e:
-            error_msg = f"预测时发生错误: {str(e)}"
+            error_msg = f"预测错误: {str(e)}"
             self.error_occurred.emit(error_msg)
-            self.prediction_ready.emit(0.5)  # 发送默认值
+            self.prediction_ready.emit(0.5)
+
 
 class NNThread(QThread):
     """
-    神经网络线程，封装了神经网络工作器
+    改进版神经网络线程，优化了资源管理和错误处理
     """
-    def __init__(self):
-        if torch.cuda.is_available():
-            device = "cuda"
-        else:
-            device = "cpu"
-            print("未检测到NVIDIA Cuda,请参考手册检查。将使用CPU运行")
-        super().__init__()
-        self.worker = NNWorker(device)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.worker = NNWorker(self._detect_device())
         self.worker.moveToThread(self)
-        
-        # 连接信号
-        self.worker.error_occurred.connect(self.handle_error)
-        
-        # 线程启动时初始化
-        self.started.connect(self.initialize)
 
-    def initialize(self):
-        """线程启动时初始化"""
-        self.worker.load_model()
+        # 信号连接
+        self.worker.error_occurred.connect(self._handle_error)
+        self.worker.predict_requested.connect(self.worker.predict)
+        self.started.connect(self.worker.load_model)
 
-    def handle_error(self, error_msg):
-        """处理错误信号"""
-        # 这里可以记录日志或执行其他错误处理
-        print(f"神经网络线程错误: {error_msg},尝试终止进程")
-        self.stop()
+    @staticmethod
+    def _detect_device():
+        """自动检测最佳计算设备"""
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        print("警告: 使用CPU模式，性能可能受限")
+        return "cpu"
 
     def request_prediction(self, left_counts, right_counts):
-        """请求预测"""
-        # 使用元调用确保在正确的线程中执行
-        self.metaObject().invokeMethod(
-            self.worker, 
-            'predict', 
-            Qt.QueuedConnection,
-            Q_ARG(list, left_counts),
-            Q_ARG(list, right_counts)
-        )
+        """线程安全的预测请求"""
+        left_counts = list(map(int, left_counts))
+        right_counts = list(map(int, right_counts))
+        self.worker.predict_requested.emit(left_counts, right_counts)
 
-    def stop(self):
-        """停止线程"""
-        self.quit()
-        self.wait()
+    def _handle_error(self, error_msg):
+        """集中错误处理"""
+        print(f"神经网络错误: {error_msg}")
+
+    def safe_stop(self):
+        """安全停止线程"""
+        if self.isRunning():
+            self.quit()
+            if not self.wait(2000):
+                self.terminate()
+            print("神经网络线程已安全停止")
+
+    def __del__(self):
+        """析构时确保线程停止"""
+        self.safe_stop()

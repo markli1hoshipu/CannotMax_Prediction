@@ -50,7 +50,12 @@ class MainWindow(QMainWindow):
                 tab.cleanup()
         event.accept()
 
-        
+    def closeEvent(self, event):
+        # 清理所有tab页的资源
+        for tab in self.tabs.values():
+            if hasattr(tab, 'cleanup'):
+                tab.cleanup()
+        event.accept()    
 
 if __name__ == "__main__":
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"  # 可选：启用高DPI缩放
@@ -63,5 +68,5 @@ if __name__ == "__main__":
     window.resize(900, 600)
     window.show()
     #app.exec()
-
+    
     sys.exit(app.exec())
