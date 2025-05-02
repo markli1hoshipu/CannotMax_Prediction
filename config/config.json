@@ -12,6 +12,6 @@
     "save_dir": "trained_models",
     "model_dir": "trained_models/best_model_full.pth",
     "max_feature_value": 100,
-    "ui_file": "resources/ui/main.ui",
+    "ui_file": "resources/ui/main_window.ui",
     "ui_photos_direc": "resources/ui/ui_images"
 }
