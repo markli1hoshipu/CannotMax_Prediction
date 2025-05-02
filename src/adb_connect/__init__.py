@@ -1,3 +1,3 @@
 # src/recognize/__init__.py
 
-from .loadData import loadDatar
+from .loadData import AutoGameController
