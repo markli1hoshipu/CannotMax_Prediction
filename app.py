@@ -42,6 +42,13 @@ class MainWindow(QMainWindow):
 
         self.tabs['LegacyTab'] = LegacyTab()
         self.ui.tabWidget.addTab(self.tabs['LegacyTab'], "旧模板展示")
+        
+    def closeEvent(self, event):
+        # 清理所有tab页的资源
+        for tab in self.tabs.values():
+            if hasattr(tab, 'cleanup'):
+                tab.cleanup()
+        event.accept()
 
     def closeEvent(self, event):
         # 清理所有tab页的资源
@@ -60,4 +67,6 @@ if __name__ == "__main__":
     window.setWindowTitle("CannotMax")
     window.resize(900, 600)
     window.show()
+    #app.exec()
+    
     sys.exit(app.exec())
