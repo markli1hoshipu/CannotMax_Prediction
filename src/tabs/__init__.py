@@ -7,7 +7,7 @@ from .adb_tab import ADBTab
 from .opencv_tab import OpenCVTab
 from .train_tab import TrainTab
 from .legacy_tab import LegacyTab
-
+from .photopredict_tab import PhotoPredictTab
 __all__ = [
     'BaseTab',
     'PredictTab',

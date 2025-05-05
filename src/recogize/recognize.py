@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pytesseract
 from PIL import ImageGrab
+from utils import get_config
 
 # 配置Tesseract路径
 pytesseract.pytesseract.tesseract_cmd = r'src\outerTools\Tesseract-OCR\tesseract.exe'
@@ -296,7 +297,7 @@ class ImageRecognizer:
 
         return results
 
-    def load_ref_images(self, ref_dir="resources\ui\ui_images"):
+    def load_ref_images(self, ref_dir=config()["ui_photos_direc"]):
         """加载参考图片库"""
         ref_images = {}
         for i in range(56):
