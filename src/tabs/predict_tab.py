@@ -17,6 +17,7 @@ class PredictTab(BaseTab):
         
         self.config = get_config()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = self.config["model_dir"]
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.ui)
@@ -27,10 +28,28 @@ class PredictTab(BaseTab):
         self._init_enemy_selection_table()
     
     def setup_connections(self):
+        self._load_files()
+        self.ui.comboSelectModel.currentTextChanged.connect(self._update_model)
         self.ui.btnClear.clicked.connect(self._clear_all_numbers)
         self.ui.btnCheck.clicked.connect(self._transfer_valid_data)
 
-    
+    def _load_files(self):
+        """加载指定目录下的所有文件名到下拉栏"""
+        directory = self.config["save_dir"]  # 替换成你的目标文件夹路径
+        self.ui.comboSelectModel.clear()  # 清空现有选项
+
+        try:
+            files = os.listdir(directory)
+            for file in files:
+                if os.path.isfile(os.path.join(directory, file)):  # 只添加文件，不包含子目录
+                    self.ui.comboSelectModel.addItem(file)
+        except FileNotFoundError:
+            print(f"错误: 目录 '{directory}' 不存在！")
+
+    def _update_model(self, model):
+        self.model = os.path.join(self.config["save_dir"], model)
+        self._init_nn_thread() 
+
     def clear_tables(self):
         """清空所有表格数据"""
         tables = [
@@ -228,10 +247,14 @@ class PredictTab(BaseTab):
         return spin
 
     def _init_nn_thread(self):
-        self._nn_thread = NNThread()
+        if hasattr(self, '_nn_thread') and self._nn_thread.isRunning():
+            self._nn_thread.safe_stop()  # 自定义的安全停止方法
+        self._nn_thread = NNThread(model_path = self.model)
         self._nn_thread.worker.prediction_ready.connect(self._handle_prediction)
         self._nn_thread.worker.error_occurred.connect(self._handle_error)
         self._nn_thread.start()
+
+
 
     def predictText(self, prediction):
         """格式化预测结果并设置样式（完全匹配原始逻辑）"""
