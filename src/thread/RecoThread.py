@@ -1,5 +1,5 @@
 from PySide6.QtCore import QThread, Signal ,QProcess,QMutex, QMutexLocker
-from ..recogize import ImageRecognizer
+from ..recognize import ImageRecognizer
 
 class RecoThread(QThread):
     """OCR识别线程"""

@@ -25,14 +25,14 @@ class MainWindow(QMainWindow):
     def setup_tabs(self):
         """初始化所有Tab页"""
         
-        self.tabs['PredictTab'] = PredictTab()
-        self.ui.tabWidget.addTab(self.tabs['PredictTab'], "手动斗蛐蛐")
+        # self.tabs['PredictTab'] = PredictTab()
+        # self.ui.tabWidget.addTab(self.tabs['PredictTab'], "手动斗蛐蛐")
         
         # self.tabs['ManualTab'] = ManualTab()
         # self.ui.tabWidget.addTab(self.tabs['ManualTab'], "人工录入")
 
         self.tabs['PhotoPredictTab'] = PhotoPredictTab()
-        self.ui.tabWidget.addTab(self.tabs['PhotoPredictTab'], "图片斗蛐蛐")
+        self.ui.tabWidget.addTab(self.tabs['PhotoPredictTab'], "斗蛐蛐")
 
         self.tabs['ADBTab'] = ADBTab()
         self.ui.tabWidget.addTab(self.tabs['ADBTab'], "ADB录入")
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
     window = MainWindow()
     window.setWindowTitle("CannotMax")
-    window.resize(900, 600)
+    window.resize(1200, 800)
     window.show()
     #app.exec()
     
