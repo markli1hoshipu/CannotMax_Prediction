@@ -1,12 +1,20 @@
 import os
 import cv2
 import numpy as np
-import pytesseract
+import traceback
+import re
 from PIL import ImageGrab
-from utils import get_config
-
-# 配置Tesseract路径
-pytesseract.pytesseract.tesseract_cmd = r'src\outerTools\Tesseract-OCR\tesseract.exe'
+from src.utils import get_config
+from src.utils.log import logger
+try:
+    from rapidocr_onnxruntime import RapidOCR
+    rapid_ocr_instance = RapidOCR()
+except ImportError:
+    rapid_ocr_instance = None
+    logger.error(f"RapidOCR 导入失败:{traceback.format_exc()}")
+except Exception as e:
+    logger.error(f"错误: 初始化 RapidOCR 实例失败: {e}\n{traceback.format_exc()}")
+    rapid_ocr_instance = None
 
 class ImageRecognizer:
     def __init__(self):
@@ -252,36 +260,54 @@ class ImageRecognizer:
                 # 图像匹配
                 matched_id, confidence = self.find_best_match(sub_roi, ref_images)
                 print(f"target: {idx} confidence: {confidence}")
+                if rapid_ocr_instance:
+                    try:
+                        # ================== OCR数字识别部分 ==================
+                        rel_num = self.relative_regions_nums[idx]
+                        rx1_num = int(rel_num[0] * main_width)
+                        ry1_num = int(rel_num[1] * main_height)
+                        rx2_num = int(rel_num[2] * main_width)
+                        ry2_num = int(rel_num[3] * main_height)
 
-                # ================== OCR数字识别部分 ==================
-                rel_num = self.relative_regions_nums[idx]
-                rx1_num = int(rel_num[0] * main_width)
-                ry1_num = int(rel_num[1] * main_height)
-                rx2_num = int(rel_num[2] * main_width)
-                ry2_num = int(rel_num[3] * main_height)
-
-                # 提取OCR识别用的子区域
-                sub_roi_num = screenshot[ry1_num:ry2_num, rx1_num:rx2_num]
-                processed = self.preprocess(sub_roi_num)
-
-                # 存储OCR图像用于debug
-                cv2.imwrite(f"images/tmp/number_{idx}.png", processed)
-
-                # OCR识别（保留优化后的处理逻辑）
-                custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789x×X'
-                number = pytesseract.image_to_string(processed, config=custom_config).strip()
-                number = number.replace('×', 'x').lower()  # 统一符号
-
-                # 提取有效数字部分
-                x_pos = number.find('x')
-                if x_pos != -1:
-                    number = number[x_pos + 1:]  # 截取x之后的字符串
-                number = ''.join(filter(str.isdigit, number))
-
-                # 保存有数字的图片到images/nums中的对应文件夹
-                # if number:
-                #     self.save_number_image(number, processed, matched_id)
-                
+                        # 提取OCR识别用的子区域
+                        sub_roi_num = screenshot[ry1_num:ry2_num, rx1_num:rx2_num]
+                        processed = self.preprocess(sub_roi_num)
+                        ocr_results, _ = rapid_ocr_instance(processed)
+                        if ocr_results:
+                            best_confidence = -1.0  # 初始化最低置信度
+                            parsed_number = None  # 初始化找到的数字
+                            text = ""
+                            for idx, result_tuple in enumerate(ocr_results):
+                                if len(result_tuple) == 3:
+                                    box, text, confidence = result_tuple
+                                elif len(result_tuple) == 2:
+                                    text, confidence = result_tuple
+                                    box = None  # 无 Box 信息
+                                else:
+                                    logger.warning(f"      - 未知 RapidOCR 结果格式: {result_tuple}")
+                                    continue
+                                match = re.search(r'\d+', text)
+                                current_number = None
+                                if match:
+                                    current_number = int(match.group(0))
+                                else:
+                                    current_number = int(text)
+                                if current_number is not None:
+                                    # 如果当前数字结果的置信度更高，则更新 best_confidence 和 parsed_number
+                                    if confidence > best_confidence:
+                                        best_confidence = confidence
+                                        parsed_number = current_number
+                            if parsed_number is not None:
+                                number = parsed_number
+                            else:
+                                number = None
+                        else:
+                            number = None
+                    except Exception as e:
+                        print(f"区域{idx} OCR处理失败: {traceback.format_exc()}")
+                        number = None
+                else:
+                    number = None
                 results.append({
                     "region_id": idx,
                     "matched_id": matched_id,
@@ -297,7 +323,7 @@ class ImageRecognizer:
 
         return results
 
-    def load_ref_images(self, ref_dir=config()["ui_photos_direc"]):
+    def load_ref_images(self, ref_dir=get_config()["ui_photos_direc"]):
         """加载参考图片库"""
         ref_images = {}
         for i in range(56):
