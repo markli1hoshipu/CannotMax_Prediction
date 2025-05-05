@@ -1,5 +1,6 @@
 from .base_tab import BaseTab
 from PySide6.QtWidgets import QVBoxLayout
+from ..utils import get_config
 
 class ADBTab(BaseTab):
 
@@ -7,17 +8,24 @@ class ADBTab(BaseTab):
 
     def setup_ui(self):
         # 设置布局
+        self.device_serial = "" 
+        self.statistics = {}
+        self.config = get_config()
+
         layout = QVBoxLayout(self)
         layout.addWidget(self.ui)
         self.setLayout(layout)
-        
+
     
     def setup_connections(self):
-        if hasattr(self.ui, 'btnClear'):
-            self.ui.btnClear.clicked.connect(self._clear_all_numbers)
-    
-    def _clear_all_numbers(self):
-        print("Clear button clicked")
+        self.ui.btnUpdate_2.clicked.connect(self._update_deviceserial)
+        self.ui.btnAutoGetData_2.clicked.connect(self._auto_collect)
+
+    def _update_deviceserial(self):
+        self.device_serial = self.ui.lineSimuNum_2.text().strip()
+
+    def _auto_collect(self):
+        pass
 
 if __name__ == "__main__":
     # 独立运行测试
