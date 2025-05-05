@@ -15,35 +15,36 @@ class NNWorker(QObject):
     model_loaded = Signal()                  # 模型加载完成信号
     predict_requested = Signal(list, list)   # 请求预测信号，供线程调用
 
-    def __init__(self, device='cpu'):
+    def __init__(self, model_path, device='cpu'):
         super().__init__()
         self.device = torch.device(device)
+        self.model_path = model_path
         self.model = None
         self._model_loaded = False
 
     @Slot()
-    def load_model(self, model_path=get_config()['model_dir']):
+    def load_model(self):
         """自动选择加载策略"""
         try:
-            if not os.path.exists(model_path):
-                raise FileNotFoundError(f"模型文件不存在: {model_path}")
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"模型文件不存在: {self.model_path}")
 
             # 先尝试安全模式
             try:
                 import torch.serialization
                 torch.serialization.add_safe_globals([UnitAwareTransformer])
                 try:
-                    model = torch.load(model_path, map_location=self.device, weights_only=False)
+                    model = torch.load(self.model_path, map_location=self.device, weights_only=False)
                 except TypeError:  # 如果旧版本 PyTorch 不认识 weights_only
-                    model = torch.load(model_path, map_location=self.device)
+                    model = torch.load(self.model_path, map_location=self.device)
 
             except:
                 print("警告: 使用非安全模式加载模型，请确保模型来源可信")
                 # 加载模型权重
                 try:
-                    model = torch.load(model_path, map_location=self.device, weights_only=False)
+                    model = torch.load(self.model_path, map_location=self.device, weights_only=False)
                 except TypeError:  # 如果旧版本 PyTorch 不认识 weights_only
-                    model = torch.load(model_path, map_location=self.device)
+                    model = torch.load(self.model_path, map_location=self.device)
 
             model.eval()
             self.model = model.to(self.device)
@@ -99,9 +100,9 @@ class NNThread(QThread):
     """
     改进版神经网络线程，优化了资源管理和错误处理
     """
-    def __init__(self, parent=None):
+    def __init__(self, model_path = get_config()['model_dir'],parent=None):
         super().__init__(parent)
-        self.worker = NNWorker(self._detect_device())
+        self.worker = NNWorker(model_path, self._detect_device())
         self.worker.moveToThread(self)
 
         # 信号连接

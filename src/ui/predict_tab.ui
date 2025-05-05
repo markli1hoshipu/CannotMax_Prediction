@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>637</width>
-    <height>477</height>
+    <width>987</width>
+    <height>584</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -197,6 +197,9 @@ QGroupBox::title {
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QComboBox" name="comboSelectModel"/>
+        </item>
         <item>
          <widget class="QPushButton" name="btnCheck">
           <property name="text">
