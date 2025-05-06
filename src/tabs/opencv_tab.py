@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QTableWid
                               QVBoxLayout,QTableWidgetItem)
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Slot, Qt
-from src.recognize import recognize_monsters
+from src.recognize import detect_enemies
 from src.utils import get_config
 import os
 
@@ -65,7 +65,7 @@ class OpenCVTab(BaseTab):
                 )
                 
                 # 识别敌人
-                enemy_list = recognize_monsters(pixmap)
+                enemy_list = detect_enemies(pixmap)
                 self._update_table(enemy_list)
                 
         except Exception as e:

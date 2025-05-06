@@ -1,7 +1,6 @@
 # src/ui/tabs/__init__.py
 
 from .base_tab import BaseTab
-from .predict_tab import PredictTab
 from .adb_tab import ADBTab
 from .opencv_tab import OpenCVTab
 from .photopredict_tab import PhotoPredictTab

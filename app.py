@@ -6,7 +6,7 @@ from src.module.TransformerNet import UnitAwareTransformer
 import os
 import sys
 from src.utils import get_config
-from src.tabs import PredictTab, ManualTab, ADBTab, OpenCVTab, TrainTab, LegacyTab, PhotoPredictTab
+from src.tabs import ADBTab, OpenCVTab, PhotoPredictTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -25,26 +25,17 @@ class MainWindow(QMainWindow):
     def setup_tabs(self):
         """初始化所有Tab页"""
         
-        # self.tabs['PredictTab'] = PredictTab()
-        # self.ui.tabWidget.addTab(self.tabs['PredictTab'], "斗蛐蛐")
-        
-        # self.tabs['ManualTab'] = ManualTab()
-        # self.ui.tabWidget.addTab(self.tabs['ManualTab'], "人工录入")
+ 
 
         self.tabs['PhotoPredictTab'] = PhotoPredictTab()
         self.ui.tabWidget.addTab(self.tabs['PhotoPredictTab'], "斗蛐蛐")
 
-        self.tabs['ADBTab'] = ADBTab()
-        self.ui.tabWidget.addTab(self.tabs['ADBTab'], "ADB录入")
+        # self.tabs['ADBTab'] = ADBTab()
+        # self.ui.tabWidget.addTab(self.tabs['ADBTab'], "ADB录入")
 
-        self.tabs['OpenCVTab'] = OpenCVTab()
-        self.ui.tabWidget.addTab(self.tabs['OpenCVTab'], "OpenCV录入")
+        # self.tabs['OpenCVTab'] = OpenCVTab()
+        # self.ui.tabWidget.addTab(self.tabs['OpenCVTab'], "OpenCV录入")
 
-        # self.tabs['TrainTab'] = TrainTab()
-        # self.ui.tabWidget.addTab(self.tabs['TrainTab'], "模型训练")
-
-        # self.tabs['LegacyTab'] = LegacyTab()
-        # self.ui.tabWidget.addTab(self.tabs['LegacyTab'], "旧模板展示")
         
     def closeEvent(self, event):
         # 清理所有tab页的资源

@@ -13,6 +13,7 @@ def get_ui_path(tab_name):
         'ui',
         f'{tab_name}.ui'
     ))
+
 def get_spinbox_column_data(table_widget, column_index):
     """读取指定列的 QSpinBox 值，返回整数列表"""
     column_data = []
