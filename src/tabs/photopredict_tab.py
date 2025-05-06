@@ -1,16 +1,18 @@
-from src.utils import get_config, get_spinbox_column_data
+from src.utils import get_config, get_spinbox_column_data, select_roi
 from src.thread import NNWorker, NNThread
-from src.module import ScreenCapture
 from src.recognize import recognize_monsters
 import os
 import torch
 from .base_tab import BaseTab
 from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QTableWidget, 
                               QHeaderView, QSpinBox, QHBoxLayout, QLabel, QWidget, 
-                              QVBoxLayout,QTableWidgetItem)
+                              QVBoxLayout,QTableWidgetItem, QMessageBox)
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap, QImage, QGuiApplication
 from PySide6.QtCore import Slot, Qt
+import numpy as np
+from PIL import ImageGrab
+from PySide6.QtGui import QImage
 
 class PhotoPredictTab(BaseTab):
 
@@ -20,8 +22,6 @@ class PhotoPredictTab(BaseTab):
         self.config = get_config()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self.config["model_dir"]
-        self.screen_capture = ScreenCapture()
-
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.ui)
@@ -30,49 +30,105 @@ class PhotoPredictTab(BaseTab):
         self._init_nn_thread()
         self.clear_tables()
         self._init_enemy_selection_table()
-    
+        
     def setup_connections(self):
+        # 初始化连接
         self._load_files()
         self.ui.comboSelectModel.currentTextChanged.connect(self._update_model)
         self.ui.btnClear.clicked.connect(self._clear_all_numbers)
         self.ui.btnCheck.clicked.connect(self._transfer_valid_data)
+        
+        # 截图按钮连接
+        self.ui.btnCapture.clicked.connect(self._on_area_capture)
+        
+        # 初始化UI状态
+        self._set_capture_ui_state(False, "点击按钮开始选区截图")
 
-        self.screen_capture.screenshot_captured.connect(self._show_screenshot)
-        self.screen_capture.error_occurred.connect(self._show_error)
-        self.ui.btnCapture.clicked.connect(self._on_capture_clicked)
-
-    @Slot(QImage)
-    def _show_screenshot(self, image):
-        """显示截图到 QLabel"""
-        pixmap = QPixmap.fromImage(image)
-        # 缩放以适应 QLabel（保持比例）
-        self.ui.labelScreenshot.setPixmap(
-            pixmap.scaled(
-                self.ui.labelScreenshot.width(),
-                self.ui.labelScreenshot.height(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
+    def _set_capture_ui_state(self, capturing, message=None):
+        """设置截图UI状态"""
+        self.ui.btnCapture.setEnabled(not capturing)
+        if hasattr(self.ui, 'labelCaptureStatus'):  # 如果有状态标签
+            self.ui.labelCaptureStatus.setText(message if message else "")
+        
+        # 设置忙碌光标
+        QGuiApplication.setOverrideCursor(
+            Qt.CrossCursor if capturing else Qt.ArrowCursor
         )
-        enemy_list = recognize_monsters(pixmap)
-        print(enemy_list) 
-        self._update_table(enemy_list)
-
-    @Slot(str)
-    def _show_error(self, error_msg):
-        """显示错误信息"""
-        self.ui.labelScreenshot.setText(f"错误: {error_msg}")
+        if not capturing:
+            QGuiApplication.restoreOverrideCursor()
 
     @Slot()
-    def _on_capture_clicked(self):
-        """点击截图按钮时的操作"""
-        # 如果有输入窗口句柄，可以这样获取（示例）
-        target_window = None
-        if hasattr(self.ui, "spinWindowHandle"):
-            target_window = self.ui.spinWindowHandle.value()
+    def _on_area_capture(self):
+        """区域截图功能"""
+        try:
+            self._set_capture_ui_state(True, "请拖动鼠标选择区域 (ESC取消)")
+            
+            # 使用改进的OpenCV选区
+            roi = select_roi()
+            
+            if not roi:  # 用户取消选择
+                self._set_capture_ui_state(False, "选区已取消")
+                return
+            
+            print(roi)
+            # 获取选区截图并确保内存连续
+            (x1, y1), (x2, y2) = roi
+            
+            screenshot = ImageGrab.grab()
+            cropped = screenshot.crop((x1, y1, x2, y2)).convert("RGB")
+            
 
-        # 执行截图
-        self.screen_capture.capture(target_window)
+            # 获取当前文件的上上级路径 + tmp 文件夹
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+            tmp_dir = os.path.join(project_root, "tmp")
+            os.makedirs(tmp_dir, exist_ok=True)
+
+
+            filepath = os.path.join(tmp_dir, "screenshot.png")
+            cropped.save(filepath)
+
+            # 从文件中加载 QImage
+            q_img = QImage(filepath)
+            if q_img.isNull():
+                raise RuntimeError("QImage 从 PNG 文件加载失败")
+
+            # 显示
+            pixmap = QPixmap.fromImage(q_img)
+            self.ui.labelScreenshot.setPixmap(
+                pixmap.scaled(
+                    self.ui.labelScreenshot.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+            )
+            
+            
+            # 识别处理
+            enemy_list = recognize_monsters(pixmap)
+            self._update_table(enemy_list)
+            self._set_capture_ui_state(False, "识别完成！点击按钮重新截图")
+            
+        except Exception as e:
+            self._show_error(f"截图失败: {str(e)}")
+            import traceback
+            traceback.print_exc()  # 打印完整错误堆栈
+        finally:
+            self._set_capture_ui_state(False)
+
+    def _show_error(self, error_msg):
+        """显示错误信息"""
+        self.ui.labelScreenshot.setText("截图错误")
+        if hasattr(self.ui, 'labelCaptureStatus'):
+            self.ui.labelCaptureStatus.setText(error_msg)
+        
+        QMessageBox.critical(
+            self,
+            "截图错误",
+            error_msg,
+            QMessageBox.Ok
+        )
+
 
     def _update_table(self, enemy_list):
         pass

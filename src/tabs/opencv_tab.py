@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QTableWid
                               QVBoxLayout,QTableWidgetItem)
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Slot, Qt
-from src.module import ScreenCapture
 from src.recognize import recognize_monsters
 from src.utils import get_config
 import os
@@ -17,9 +16,7 @@ class OpenCVTab(BaseTab):
         layout.addWidget(self.ui)
         self.setLayout(layout)
 
-        
-
-        self.screen_capture = ScreenCapture()
+    
         self.config = get_config()
         self.game_mode = "单人" 
         self.is_invest = True
@@ -27,9 +24,8 @@ class OpenCVTab(BaseTab):
         self._init_enemy_selection_table()
 
     def setup_connections(self):
-        self.screen_capture.screenshot_captured.connect(self._show_screenshot)
-        self.screen_capture.error_occurred.connect(self._show_error)
-        self.ui.btnCapture.clicked.connect(self._on_capture_clicked)
+        self.ui.btnCapture.clicked.connect(self._on_area_capture)
+
         self.ui.rdbtn1P_2.clicked.connect(lambda: self.update_gamemode("单人"))
         self.ui.rdbtn30P_2.clicked.connect(lambda: self.update_gamemode("30人"))
         self.ui.btnClear_2.clicked.connect(self._clear_all_numbers)
@@ -39,43 +35,43 @@ class OpenCVTab(BaseTab):
         self.ui.btnRightWin.clicked.connect(self.right_win_collect)
 
     @Slot()
-    def update_gamemode(self, mode_name):
-        self.game_mode = mode_name
-
-    @Slot(QImage)
-    def _show_screenshot(self, image):
-        """显示截图到 QLabel"""
-        pixmap = QPixmap.fromImage(image)
-        # 缩放以适应 QLabel（保持比例）
-        self.ui.labelScreenshot.setPixmap(
-            pixmap.scaled(
-                self.ui.labelScreenshot.width(),
-                self.ui.labelScreenshot.height(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-        )
-        enemy_list = recognize_monsters(pixmap)
-        print(enemy_list) 
-        self._update_table(enemy_list)
-
-    @Slot(str)
-    def _show_error(self, error_msg):
-        """显示错误信息"""
-        self.ui.labelScreenshot.setText(f"错误: {error_msg}")
-
-    @Slot()
-    def _on_capture_clicked(self):
-        """点击截图按钮时的操作"""
-        # 如果有输入窗口句柄，可以这样获取（示例）
-        target_window = None
-        if hasattr(self.ui, "spinWindowHandle"):
-            target_window = self.ui.spinWindowHandle.value()
-
-        # 执行截图
-        self.screen_capture.capture(target_window)
-
-
+    def _on_area_capture(self):
+        """区域截图"""
+        try:
+            self._set_capture_ui_state(True, "请用鼠标选择区域 (ESC取消)")
+            
+            # 使用OpenCV版本的选择器
+            from utils import select_roi
+            roi = select_roi()
+            
+            if roi:
+                # 获取选区的截图
+                (x1, y1), (x2, y2) = roi
+                screenshot = np.array(ImageGrab.grab())
+                cropped = screenshot[y1:y2, x1:x2]
+                
+                # 转换为QPixmap显示
+                height, width, _ = cropped.shape
+                bytes_per_line = 3 * width
+                q_img = QImage(cropped.data, width, height, bytes_per_line, QImage.Format_RGB888)
+                pixmap = QPixmap.fromImage(q_img)
+                
+                self.ui.labelScreenshot.setPixmap(
+                    pixmap.scaled(
+                        self.ui.labelScreenshot.size(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                )
+                
+                # 识别敌人
+                enemy_list = recognize_monsters(pixmap)
+                self._update_table(enemy_list)
+                
+        except Exception as e:
+            self._show_error(f"截图失败: {str(e)}")
+        finally:
+            self._set_capture_ui_state(False)
 
     def _update_table(self, enemy_list):
         pass

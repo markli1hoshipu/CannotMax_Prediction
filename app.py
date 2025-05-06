@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
         """初始化所有Tab页"""
         
         # self.tabs['PredictTab'] = PredictTab()
-        # self.ui.tabWidget.addTab(self.tabs['PredictTab'], "手动斗蛐蛐")
+        # self.ui.tabWidget.addTab(self.tabs['PredictTab'], "斗蛐蛐")
         
         # self.tabs['ManualTab'] = ManualTab()
         # self.ui.tabWidget.addTab(self.tabs['ManualTab'], "人工录入")
