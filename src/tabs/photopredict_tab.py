@@ -1,4 +1,4 @@
-from src.utils import get_config, get_spinbox_column_data, ScreenSelectionWidget, mapping
+from src.utils import get_config, get_spinbox_column_data, ScreenSelectionWidget, get_monster_info, find_identical_rows
 from src.recognize import detect_enemies
 from src.thread import NNWorker, NNThread
 import os
@@ -24,6 +24,7 @@ class PhotoPredictTab(BaseTab):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self.config["model_dir"]
         self.selected_region = None  # 存储选中的区域
+        self._nn_threads = []
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.ui)
@@ -176,7 +177,6 @@ class PhotoPredictTab(BaseTab):
             if isinstance(spin_right, QSpinBox):
                 spin_right.setValue(right_value)
 
-
     def _update_table(self, enemy_list):
         left_counts = [0]*56
         for book in enemy_list[:3]:
@@ -191,9 +191,9 @@ class PhotoPredictTab(BaseTab):
         self.set_enemy_counts(left_counts, right_counts)
         self._transfer_valid_data()
 
-
     def _load_files(self):
         """加载指定目录下的所有文件名到下拉栏"""
+        ret = []
         directory = self.config["save_dir"]  # 替换成你的目标文件夹路径
         self.ui.comboSelectModel.clear()  # 清空现有选项
 
@@ -202,9 +202,11 @@ class PhotoPredictTab(BaseTab):
             for file in files:
                 if os.path.isfile(os.path.join(directory, file)):  # 只添加文件，不包含子目录
                     self.ui.comboSelectModel.addItem(file)
+                    ret.append(os.path.join(directory, file))
         except FileNotFoundError:
             print(f"错误: 目录 '{directory}' 不存在！")
-
+        finally:
+            return ret
     def _update_model(self, model):
         self.model = os.path.join(self.config["save_dir"], model)
         self._init_nn_thread() 
@@ -368,7 +370,6 @@ class PhotoPredictTab(BaseTab):
 
         self._predict_result()
 
-
     def _force_table_style(self, table):
         """强制刷新表格样式"""
         table.style().unpolish(table)
@@ -406,14 +407,12 @@ class PhotoPredictTab(BaseTab):
         return spin
 
     def _init_nn_thread(self):
-        if hasattr(self, '_nn_thread') and self._nn_thread.isRunning():
-            self._nn_thread.safe_stop()  # 自定义的安全停止方法
-        self._nn_thread = NNThread(model_path = self.model)
-        self._nn_thread.worker.prediction_ready.connect(self._handle_prediction)
-        self._nn_thread.worker.error_occurred.connect(self._handle_error)
-        self._nn_thread.start()
-
-
+        for modelpath in self._load_files():
+            nn_thread = NNThread(model_path = modelpath)
+            nn_thread.worker.prediction_ready.connect(self._handle_prediction)
+            nn_thread.worker.error_occurred.connect(self._handle_error)
+            nn_thread.start()
+            self._nn_threads.append(nn_thread)
 
     def predictText(self, prediction):
         """格式化预测结果并设置样式（完全匹配原始逻辑）"""
@@ -425,34 +424,28 @@ class PhotoPredictTab(BaseTab):
         left_win_prob = 1 - right_win_prob
 
         # 格式化输出文本（保持完全一致）
-        result_text = (f"预测结果:\n"
-                    f"左方胜率: {left_win_prob:.2%}\n"
-                    f"右方胜率: {right_win_prob:.2%}")
+        result_text = (f"左: {left_win_prob:.2%} ; 右: {right_win_prob:.2%}")
 
         # 根据胜率设置颜色和字体（完全复制原始逻辑）
         if left_win_prob > 0.7:
             color = "#E23F25"  # 红色
             font_weight = "bold"
-        elif left_win_prob > 0.6:
-            color = "#E23F25"  # 红色 
-            font_weight = "bold"
         elif right_win_prob > 0.7:
-            color = "#25ace2"  # 蓝色
-            font_weight = "bold"
-        elif right_win_prob > 0.6:
             color = "#25ace2"  # 蓝色
             font_weight = "bold"
         else:
             color = "#000000"  # 黑色
             font_weight = "bold"
 
-        # 应用样式到QPlainTextEdit（实现等效于Tkinter的config）
-        self.ui.textOutcome.setPlainText(result_text)
+        current_text = self.ui.textOutcome.toPlainText()
+        if current_text == "计算进行中...":
+            current_text = ""
+        self.ui.textOutcome.setPlainText(current_text + "\n" + result_text)
+        
         self.ui.textOutcome.setStyleSheet(f"""
-            QPlainTextEdit {{
+            QTextEdit {{
                 color: {color};
                 font-weight: {font_weight};
-                font-size: 12pt;
                 font-family: Helvetica;
             }}
         """)
@@ -464,13 +457,32 @@ class PhotoPredictTab(BaseTab):
             left_counts = get_spinbox_column_data(self.ui.tableSelectEnemy, 1)
             right_counts = get_spinbox_column_data(self.ui.tableSelectEnemy, 2)
 
-            self.ui.textOutcome.setPlainText("计算中...")
-            self._nn_thread.request_prediction(left_counts, right_counts)
+            self.ui.textOutcome.setPlainText("计算进行中...")
+            self.ui.textLeftMonster.setPlainText("")
+            self.ui.textRightMonster.setPlainText("")
+
+            left, right = find_identical_rows(left_counts+right_counts)
+            if left + right == 0:
+                self.ui.textOutcome.setPlainText("无相似阵容记录")
+            else:
+                self.ui.textOutcome.setPlainText(f"相似过往记录:{left}:{right}")
+
+            for nn_thread in self._nn_threads:
+                nn_thread.request_prediction(left_counts, right_counts)
+            for i, n in enumerate(left_counts):
+                if n != 0:
+                    current_text = self.ui.textLeftMonster.toPlainText()
+                    self.ui.textLeftMonster.setPlainText(current_text + get_monster_info(i+1))
+            for i, n in enumerate(right_counts):
+                if n != 0:
+                    current_text = self.ui.textRightMonster.toPlainText()
+                    self.ui.textRightMonster.setPlainText(current_text + get_monster_info(i+1))
+
+
 
         except Exception as e:
             self.ui.textOutcome.setPlainText(f"错误: {str(e)}")
-
-    
+ 
     def _handle_prediction(self, prediction):
         """处理预测结果信号"""
         self.predictText(prediction)  # 自动更新UI

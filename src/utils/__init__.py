@@ -3,4 +3,4 @@
 from .config import get_config
 from .ui import get_ui_path, get_spinbox_column_data
 from .screen_capture import ScreenSelectionWidget
-from .mapping import mapping
+from .monster_data import get_monster_info,find_identical_rows

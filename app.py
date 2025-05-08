@@ -24,8 +24,6 @@ class MainWindow(QMainWindow):
     
     def setup_tabs(self):
         """初始化所有Tab页"""
-        
- 
 
         self.tabs['PhotoPredictTab'] = PhotoPredictTab()
         self.ui.tabWidget.addTab(self.tabs['PhotoPredictTab'], "斗蛐蛐")
@@ -59,7 +57,7 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
     window = MainWindow()
     window.setWindowTitle("CannotMax")
-    window.resize(1200, 800)
+    window.resize(1200, 600)
     window.show()
     #app.exec()
     
