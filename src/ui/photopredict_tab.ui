@@ -187,7 +187,7 @@ QGroupBox::title {
                  </property>
                  <property name="styleSheet">
                   <string notr="true">background-color: rgb(255, 255, 255);
-color: rgb(255, 182, 193);</string>
+color: #E23F25;</string>
                  </property>
                 </widget>
                </item>
@@ -252,7 +252,7 @@ color: rgb(255, 182, 193);</string>
                  </property>
                  <property name="styleSheet">
                   <string notr="true">background-color: rgb(255, 255, 255);
-color: rgb(173, 216, 230);
+color: #25ace2;
 </string>
                  </property>
                 </widget>
@@ -336,6 +336,9 @@ color: rgb(173, 216, 230);
                </widget>
               </item>
              </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_8"/>
             </item>
             <item>
              <spacer name="verticalSpacer_6">

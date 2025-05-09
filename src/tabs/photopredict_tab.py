@@ -136,7 +136,6 @@ class PhotoPredictTab(BaseTab):
             # 5. 打印识别结果
             self._update_table(detect_enemies(filepath))
             self._set_capture_ui_state(False, "识别完成！")
-            self._predict_result()
             
         except Exception as e:
             self._show_error(f"识别失败: {str(e)}")
@@ -427,10 +426,10 @@ class PhotoPredictTab(BaseTab):
         result_text = (f"左: {left_win_prob:.2%} ; 右: {right_win_prob:.2%}")
 
         # 根据胜率设置颜色和字体（完全复制原始逻辑）
-        if left_win_prob > 0.7:
+        if left_win_prob > 0.75:
             color = "#E23F25"  # 红色
             font_weight = "bold"
-        elif right_win_prob > 0.7:
+        elif right_win_prob > 0.75:
             color = "#25ace2"  # 蓝色
             font_weight = "bold"
         else:
@@ -461,11 +460,11 @@ class PhotoPredictTab(BaseTab):
             self.ui.textLeftMonster.setPlainText("")
             self.ui.textRightMonster.setPlainText("")
 
-            left, right = find_identical_rows(left_counts+right_counts)
-            if left + right == 0:
+            records = find_identical_rows(left_counts+right_counts)
+            if len(records) == 0:
                 self.ui.textOutcome.setPlainText("无相似阵容记录")
             else:
-                self.ui.textOutcome.setPlainText(f"相似过往记录:{left}:{right}")
+                self.ui.textOutcome.setPlainText(f"相似过往记录:\n{'\n'.join(records)}")
 
             for nn_thread in self._nn_threads:
                 nn_thread.request_prediction(left_counts, right_counts)
